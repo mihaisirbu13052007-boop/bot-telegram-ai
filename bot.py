@@ -15,7 +15,7 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 # Configurare client Groq
 client = Groq(api_key=GROQ_API_KEY)
 
-# Funcție care apelează AI-ul de la Groq (Llama 3)
+# Funcție care apelează AI-ul de la Groq
 async def genereaza_analiza_text():
     prompt = (
         "Acționează ca un consultant responsabil de managementul riscului pentru jocuri de divertisment. "
@@ -32,7 +32,7 @@ async def genereaza_analiza_text():
                     "content": prompt,
                 }
             ],
-            model="llama-3.3-70b-versatile", # Unul dintre cele mai bune și rapide modele de pe Groq
+            model="llama-3.1-8b-instant", # Model stabil și rapid disponibil pe Groq
         )
         return chat_completion.choices[0].message.content
     except Exception as e:
