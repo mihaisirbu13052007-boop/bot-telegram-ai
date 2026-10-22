@@ -10,15 +10,15 @@ import google.generativeai as genai
 # Configurare jurnalizare (logging)
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-# Preluare chei din variabilele de mediu
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
+# Preluare chei din variabilele de mediu (sau direct pentru test)
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "8896679145:AAH3NmHLeL0GGPPJGWWcKWT1X_5Bhtn6jaw")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
-# Configurare model AI gratuit (Google Gemini)
+# Configurare model AI (folosim un model standard stabil, ex: gemini-1.5-flash)
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-2.5-flash')
+model = genai.GenerativeModel('gemini-1.5-flash')
 
-# 1. Mic server web intern care ține Render mulțumit (să nu închidă serviciul)
+# 1. Mic server web intern care ține Render mulțumit
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -30,7 +30,7 @@ def run_dummy_server():
     server = HTTPServer(('0.0.0.0', port), SimpleHandler)
     server.serve_forever()
 
-# Funcție care apelează AI-ul DOAR când este solicitată la apăsare
+# Funcție care apelează AI-ul
 async def genereaza_analiza_text():
     prompt = (
         "Acționează ca un consultant responsabil de managementul riscului pentru jocuri de divertisment. "
@@ -43,6 +43,7 @@ async def genereaza_analiza_text():
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
+        logging.error(f"Eroare Gemini API: {e}")
         return "Momentan serviciul de analiză AI nu este disponibil. Vă rugăm reveniți mai târziu."
 
 # Comanda /start - Meniul principal
@@ -74,6 +75,7 @@ async def semnal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     
     keyboard = [[InlineKeyboardButton("🔄 Solicită o nouă analiză", callback_data="get_stats")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(final_message, reply_markup=reply_markup, parse_mode="Markdown")
 
 # Handler pentru butoane
@@ -84,7 +86,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.data == "get_risks":
         risk_text = (
             "🛡️ **Informații Legale și Joc Responsabil**\n\n"
-            "• Jocurile de tip Crash (cum este Aviator) funcționează pe algoritmi aleatorii (*Provably Fair*).\n"
+            "• Jocurile de tip Crash funcționează pe algoritmi aleatorii (*Provably Fair*).\n"
             "• Nicio inteligență artificială nu poate ghici sau garanta multiplicatori viitori.\n"
             "• Setează-ți un buget fix și nu juca niciodată bani pe care nu îți permiți să îi pierzi."
         )
@@ -119,10 +121,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(text=final_message, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
 def main():
-    # Pornim serverul web intern într-un fir separat (thread) pentru a ura Render fericit
+    # Pornim serverul web intern într-un fir separat (thread) pentru Render
     threading.Thread(target=run_dummy_server, daemon=True).start()
 
-    # Pornim botul de Telegram
+    # Pornim botul de Telegram corect
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
@@ -133,9 +135,4 @@ def main():
     app.run_polling()
 
 if __name__ == "__main__":
-    application = Application.builder().token("8896679145:AAH3NmHLeL0GGPPJGWWcKWT1X_5Bhtn6jaw").build()
-    
-    # Adaugi handlerele aici...
-    
-    # Pornirea corectă:
-    application.run_polling()
+    main()
