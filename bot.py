@@ -3,20 +3,19 @@ import os
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler
-import google.generativeai as genai
+from groq import Groq
 
-# Configurare jurnalizare (logging)
+# Configurare jurnalizare
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # Preluare chei din variabilele de mediu
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "8896679145:AAH3NmHLeL0GGPPJGWWcKWT1X_5Bhtn6jaw")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 
-# Configurare model AI
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+# Configurare client Groq
+client = Groq(api_key=GROQ_API_KEY)
 
-# Funcție care apelează AI-ul
+# Funcție care apelează AI-ul de la Groq (Llama 3)
 async def genereaza_analiza_text():
     prompt = (
         "Acționează ca un consultant responsabil de managementul riscului pentru jocuri de divertisment. "
@@ -26,10 +25,18 @@ async def genereaza_analiza_text():
         "Fii concis, obiectiv și menționează clar riscul."
     )
     try:
-        response = model.generate_content(prompt)
-        return response.text
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ],
+            model="llama-3.3-70b-versatile", # Unul dintre cele mai bune și rapide modele de pe Groq
+        )
+        return chat_completion.choices[0].message.content
     except Exception as e:
-        logging.error(f"Eroare Gemini API: {e}")
+        logging.error(f"Eroare Groq API: {e}")
         return "Momentan serviciul de analiză AI nu este disponibil. Vă rugăm reveniți mai târziu."
 
 # Comanda /start - Meniul principal
@@ -114,11 +121,10 @@ def main():
     app.add_handler(CallbackQueryHandler(button_handler))
 
     port = int(os.environ.get("PORT", 10000))
-    render_url = os.getenv("RENDER_EXTERNAL_URL") # Adresa publică oferită automat de Render
+    render_url = os.getenv("RENDER_EXTERNAL_URL")
 
-    print(f"Pornire server Webhook pe portul {port}...")
+    print(f"Pornire server Webhook pe portul {port} (cu Groq AI)...")
 
-    # Pornirea corectă pe Render folosind Webhooks
     app.run_webhook(
         listen="0.0.0.0",
         port=port,
