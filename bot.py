@@ -133,7 +133,7 @@ def main():
     app.run_polling()
 
 if __name__ == "__main__":
-    application = Application.builder().token("896679145:AAHPVPyN-Th6uUQduL6QC13kG2Hovlb5IQ4").build()
+    application = Application.builder().token("8896679145:AAH3NmHLeL0GGPPJGWWcKWT1X_5Bhtn6jaw").build()
     
     # Adaugi handlerele aici...
     
