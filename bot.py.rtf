@@ -7,6 +7,8 @@
 
 \f0\fs24 \cf0 import os\
 import logging\
+import threading\
+from http.server import HTTPServer, BaseHTTPRequestHandler\
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup\
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler\
 import google.generativeai as genai\
@@ -15,12 +17,24 @@ import google.generativeai as genai\
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)\
 \
 # Preluare chei din variabilele de mediu\
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "INTRODU_TOKEN_TELEGRAM_AICI")\
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "INTRODU_CHEIE_GEMINI_AICI")\
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")\
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")\
 \
 # Configurare model AI gratuit (Google Gemini)\
 genai.configure(api_key=GEMINI_API_KEY)\
 model = genai.GenerativeModel('gemini-2.5-flash')\
+\
+# 1. Mic server web intern care \uc0\u539 ine Render mul\u539 umit (s\u259  nu \'eenchid\u259  serviciul)\
+class SimpleHandler(BaseHTTPRequestHandler):\
+    def do_GET(self):\
+        self.send_response(200)\
+        self.end_headers()\
+        self.wfile.write(b"Bot is active and running!")\
+\
+def run_dummy_server():\
+    port = int(os.environ.get("PORT", 10000))\
+    server = HTTPServer(('0.0.0.0', port), SimpleHandler)\
+    server.serve_forever()\
 \
 # Func\uc0\u539 ie care apeleaz\u259  AI-ul DOAR c\'e2nd este solicitat\u259  la ap\u259 sare\
 async def genereaza_analiza_text():\
@@ -53,7 +67,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):\
     )\
     await update.message.reply_text(welcome_text, reply_markup=reply_markup, parse_mode="Markdown")\
 \
-# Comanda direct\uc0\u259  /semnal (r\u259 spunde DOAR c\'e2nd o tasteaz\u259  utilizatorul)\
+# Comanda direct\uc0\u259  /semnal\
 async def semnal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):\
     await update.message.reply_text("\uc0\u55357 \u56589  Se proceseaz\u259  cererea ta de analiz\u259 ...")\
     \
@@ -66,14 +80,13 @@ async def semnal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):\
     )\
     \
     keyboard = [[InlineKeyboardButton("\uc0\u55357 \u56580  Solicit\u259  o nou\u259  analiz\u259 ", callback_data="get_stats")]]\
-    await update.message.reply_text(final_message, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")\
+    await update.message.reply_text(final_message, reply_markup=reply_markup, parse_mode="Markdown")\
 \
-# Handler pentru butoane (execut\uc0\u259  ac\u539 iuni DOAR la ap\u259 sare)\
+# Handler pentru butoane\
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):\
     query = update.callback_query\
     await query.answer()\
 \
-    # Butonul: Informativ / Riscuri\
     if query.data == "get_risks":\
         risk_text = (\
             "\uc0\u55357 \u57057 \u65039  **Informa\u539 ii Legale \u537 i Joc Responsabil**\\n\\n"\
@@ -85,7 +98,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):\
         await query.edit_message_text(text=risk_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")\
         return\
 \
-    # Butonul: \'cenapoi\
     if query.data == "back_start":\
         keyboard = [\
             [InlineKeyboardButton("\uc0\u55357 \u56522  Genereaz\u259  Analiz\u259  / Semnal", callback_data="get_stats")],\
@@ -98,7 +110,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):\
         )\
         return\
 \
-    # Butonul: Ap\uc0\u259 sat pentru generarea analizei\
     if query.data == "get_stats":\
         await query.edit_message_text(text="\uc0\u55357 \u56589  Se genereaz\u259  analiza cu AI...")\
         \
@@ -114,17 +125,19 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):\
         await query.edit_message_text(text=final_message, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")\
 \
 def main():\
+    # Pornim serverul web intern \'eentr-un fir separat (thread) pentru a ura Render fericit\
+    threading.Thread(target=run_dummy_server, daemon=True).start()\
+\
+    # Pornim botul de Telegram\
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()\
 \
-    # \'cenregistrare comenzi \uc0\u537 i handler de butoane\
     app.add_handler(CommandHandler("start", start))\
     app.add_handler(CommandHandler("semnal", semnal_command))\
-    app.add/handler(CallbackQueryHandler(button_handler)) if hasattr(app, 'add_handler') else None\
-    # R\'e2ndul corect pentru handler-ul de butoane:\
     app.add_handler(CallbackQueryHandler(button_handler))\
 \
-    print("Botul este pornit \uc0\u537 i a\u537 teapt\u259  comenzi...")\
+    print("Botul este pornit \uc0\u537 i ruleaz\u259  corect pe server!")\
     app.run_polling()\
 \
 if __name__ == '__main__':\
-    main()}
+    main()\
+}
