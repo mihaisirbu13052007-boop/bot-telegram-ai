@@ -1,14 +1,12 @@
 FROM python:3.11-slim
 
-# Setează directorul de lucru în container
 WORKDIR /app
 
-# Copiază lista de cerințe și instalează pachetele
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Instalăm pachetele direct, fără să mai căutăm requirements.txt
+RUN pip install --no-cache-dir python-telegram-bot groq
 
-# Copiază restul codului în container
-COPY . .
+# Copiază scriptul botului în container
+COPY bot.py .
 
 # Pornește botul
 CMD ["python", "bot.py"]
