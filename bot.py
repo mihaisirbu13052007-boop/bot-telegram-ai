@@ -32,7 +32,7 @@ async def genereaza_analiza_text():
                     "content": prompt,
                 }
             ],
-            model="llama-3.1-8b-instant", # Model stabil și rapid disponibil pe Groq
+            model="openai/gpt-oss-20b", # Model standard disponibil pe Groq
         )
         return chat_completion.choices[0].message.content
     except Exception as e:
