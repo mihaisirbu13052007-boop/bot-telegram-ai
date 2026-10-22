@@ -1,8 +1,6 @@
 from telegram.ext import Application
 import os
 import logging
-import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler
 import google.generativeai as genai
@@ -10,25 +8,13 @@ import google.generativeai as genai
 # Configurare jurnalizare (logging)
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-# Preluare chei din variabilele de mediu (sau direct pentru test)
+# Preluare chei din variabilele de mediu
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "8896679145:AAH3NmHLeL0GGPPJGWWcKWT1X_5Bhtn6jaw")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
-# Configurare model AI (folosim un model standard stabil, ex: gemini-1.5-flash)
+# Configurare model AI
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
-
-# 1. Mic server web intern care ține Render mulțumit
-class SimpleHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"Bot is active and running!")
-
-def run_dummy_server():
-    port = int(os.environ.get("PORT", 10000))
-    server = HTTPServer(('0.0.0.0', port), SimpleHandler)
-    server.serve_forever()
 
 # Funcție care apelează AI-ul
 async def genereaza_analiza_text():
@@ -121,18 +107,24 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(text=final_message, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
 def main():
-    # Pornim serverul web intern într-un fir separat (thread) pentru Render
-    threading.Thread(target=run_dummy_server, daemon=True).start()
-
-    # Pornim botul de Telegram corect
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("semnal", semnal_command))
     app.add_handler(CallbackQueryHandler(button_handler))
 
-    print("Botul este pornit și rulează corect pe server!")
-    app.run_polling()
+    port = int(os.environ.get("PORT", 10000))
+    render_url = os.getenv("RENDER_EXTERNAL_URL") # Adresa publică oferită automat de Render
+
+    print(f"Pornire server Webhook pe portul {port}...")
+
+    # Pornirea corectă pe Render folosind Webhooks
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        url_path=TELEGRAM_TOKEN,
+        webhook_url=f"{render_url}/{TELEGRAM_TOKEN}" if render_url else None
+    )
 
 if __name__ == "__main__":
     main()
