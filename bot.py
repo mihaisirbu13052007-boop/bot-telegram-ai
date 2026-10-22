@@ -131,5 +131,10 @@ def main():
     print("Botul este pornit și rulează corect pe server!")
     app.run_polling()
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    application = Application.builder().token("TOKEN_UL_TAU").build()
+    
+    # Adaugi handlerele aici...
+    
+    # Pornirea corectă:
+    application.run_polling()
