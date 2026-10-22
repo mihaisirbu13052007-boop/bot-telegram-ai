@@ -1,3 +1,4 @@
+from telegram.ext import Application
 import os
 import logging
 import threading
