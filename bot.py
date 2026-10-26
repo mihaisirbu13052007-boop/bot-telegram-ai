@@ -9,7 +9,7 @@ from groq import Groq
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # Preluare chei din variabilele de mediu
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "8896679145:AAH3NmHLeL0GGPPJGWWcKWT1X_5Bhtn6jaw")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "8896679145:AAEJFPiSl9Z0NkjiO1vvk6QCkYJJnfWkoDo")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 
 # Configurare client Groq
