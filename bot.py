@@ -16,7 +16,7 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 # Configurare client Groq
 client = Groq(api_key=GROQ_API_KEY)
 
-# Funcție care apelează AI-ul pentru a genera cifre și analize concrete
+# Funcție care apelează AI-ul cu un model rapid și stabil
 async def genereaza_analiza_text():
     prompt = (
         "Acționează ca un analist financiar și consultant de risc. "
@@ -31,14 +31,15 @@ async def genereaza_analiza_text():
                     "content": prompt,
                 }
             ],
-            model="openai/gpt-oss-20b",
+            model="llama-3.1-8b-instant", # Modelul standard, foarte stabil pe Groq
+            timeout=10, # Timeout de siguranță să nu blocheze botul
         )
         return chat_completion.choices[0].message.content
     except Exception as e:
-        logger.error(f"Eroare Groq API: {e}")
-        return "Momentan serviciul de analiză AI nu este disponibil. Vă rugăm reveniți mai târziu."
+        logger.error(f"Eroare detaliată Groq API: {e}")
+        return "Eroare de comunicare cu serverul AI. Verifică cheia API pe Render."
 
-# Comanda /start - Meniul principal (fără formatare complexă care ar putea da erori)
+# Comanda /start - Meniul principal
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("📊 Generează Analiză cu Cifre", callback_data="get_stats")],
@@ -56,7 +57,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Comanda directă /semnal
 async def semnal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Se calculează indicatorii și cifrele statistice...")
+    status_msg = await update.message.reply_text("Se calculează indicatorii și cifrele statistice...")
     
     ai_output = await genereaza_analiza_text()
     
@@ -68,7 +69,12 @@ async def semnal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     keyboard = [[InlineKeyboardButton("🔄 Generează Alte Cifre", callback_data="get_stats")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(final_message, reply_markup=reply_markup)
+    
+    # Edităm mesajul de status ca să nu trimitem spam
+    try:
+        await status_msg.edit_text(final_message, reply_markup=reply_markup)
+    except Exception:
+        await update.message.reply_text(final_message, reply_markup=reply_markup)
 
 # Handler pentru butoane
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -109,6 +115,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         
         keyboard = [[InlineKeyboardButton("🔄 Generează Alte Cifre", callback_data="get_stats")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text(text=final_message, reply_markup=reply_markup)
 
 # Funcție globală pentru prinderea erorilor
