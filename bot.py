@@ -5,8 +5,9 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler
 from groq import Groq
 
-# Configurare jurnalizare
+# Configurare jurnalizare detaliată
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Preluare chei din variabilele de mediu
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
@@ -34,7 +35,7 @@ async def genereaza_analiza_text():
         )
         return chat_completion.choices[0].message.content
     except Exception as e:
-        logging.error(f"Eroare Groq API: {e}")
+        logger.error(f"Eroare Groq API: {e}")
         return "Momentan serviciul de analiză AI nu este disponibil. Vă rugăm reveniți mai târziu."
 
 # Comanda /start - Meniul principal cu imagine opțională
@@ -51,8 +52,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "👇 Apasă pe butonul de mai jos pentru primul raport:"
     )
     
-    # Poți trimite o poză de întâmpinare punând un link direct către o imagine (URL)
-    photo_url = "https://images.unsplash.com/photo-1642543492481-44e81e3914a7?w=800" # Exemplu de imagine legată de grafice/statistici
+    photo_url = "https://images.unsplash.com/photo-1642543492481-44e81e3914a7?w=800"
     
     try:
         await context.bot.send_photo(
@@ -62,8 +62,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=reply_markup,
             parse_mode="Markdown"
         )
-    except Exception:
-        # Dacă din nějak motiv poza nu se poate trimite, trimite textul simplu
+    except Exception as e:
+        logger.warning(f"Nu s-a putut trimite poza, trimit doar text: {e}")
         await update.message.reply_text(welcome_text, reply_markup=reply_markup, parse_mode="Markdown")
 
 # Comanda directă /semnal
@@ -122,14 +122,22 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         
         keyboard = [[InlineKeyboardButton("🔄 Generează Alte Cifre", callback_data="get_stats")]]
-        await query.edit_message_text(text=final_message, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+        await query.edit_message_text(text=final_message, reply_markup=reply_markup, parse_mode="Markdown")
+
+# Funcție globală pentru prinderea erorilor (Error Handler)
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
+    logger.error("A apărut o excepție în timpul procesării unui update:", exc_info=context.error)
 
 def main():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
+    # Adăugare handlere
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("semnal", semnal_command))
     app.add_handler(CallbackQueryHandler(button_handler))
+
+    # Înregistrare error handler ca să vedem exact ce cauzează problema
+    app.add_error_handler(error_handler)
 
     port = int(os.environ.get("PORT", 10000))
     render_url = os.getenv("RENDER_EXTERNAL_URL")
