@@ -38,7 +38,7 @@ async def genereaza_analiza_text():
         logger.error(f"Eroare Groq API: {e}")
         return "Momentan serviciul de analiză AI nu este disponibil. Vă rugăm reveniți mai târziu."
 
-# Comanda /start - Meniul principal cu imagine opțională
+# Comanda /start - Meniul principal (fără formatare complexă care ar putea da erori)
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("📊 Generează Analiză cu Cifre", callback_data="get_stats")],
@@ -47,40 +47,28 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     welcome_text = (
-        "🤖 **Asistent Oficial de Analiză & Managementul Riscului**\n\n"
-        "Acest bot generează rapoarte statistice bazate pe **cifre concrete** și indicatori de prudență.\n\n"
-        "👇 Apasă pe butonul de mai jos pentru primul raport:"
+        "Asistent Oficial de Analiză & Managementul Riscului\n\n"
+        "Acest bot generează rapoarte statistice bazate pe cifre concrete și indicatori de prudență.\n\n"
+        "Apasă pe butonul de mai jos pentru primul raport:"
     )
     
-    photo_url = "https://images.unsplash.com/photo-1642543492481-44e81e3914a7?w=800"
-    
-    try:
-        await context.bot.send_photo(
-            chat_id=update.effective_chat.id,
-            photo=photo_url,
-            caption=welcome_text,
-            reply_markup=reply_markup,
-            parse_mode="Markdown"
-        )
-    except Exception as e:
-        logger.warning(f"Nu s-a putut trimite poza, trimit doar text: {e}")
-        await update.message.reply_text(welcome_text, reply_markup=reply_markup, parse_mode="Markdown")
+    await update.message.reply_text(welcome_text, reply_markup=reply_markup)
 
 # Comanda directă /semnal
 async def semnal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🔍 Se calculează indicatorii și cifrele statistice...")
+    await update.message.reply_text("Se calculează indicatorii și cifrele statistice...")
     
     ai_output = await genereaza_analiza_text()
     
     final_message = (
-        f"📊 **RAPORT STATISTIC DE PRUDENȚĂ**\n\n"
+        "RAPORT STATISTIC DE PRUDENȚĂ\n\n"
         f"{ai_output}\n\n"
-        f"🚨 *Notă: Respectă limitele impuse și joacă responsabil!*"
+        "Notă: Respectă limitele impuse și joacă responsabil!"
     )
     
     keyboard = [[InlineKeyboardButton("🔄 Generează Alte Cifre", callback_data="get_stats")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(final_message, reply_markup=reply_markup, parse_mode="Markdown")
+    await update.message.reply_text(final_message, reply_markup=reply_markup)
 
 # Handler pentru butoane
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -89,13 +77,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query.data == "get_risks":
         risk_text = (
-            "🛡️ **Statistici & Reguli de Siguranță Financiară**\n\n"
-            "• **Risc estimat:** 80% pierdere pe termen lung în cazul jocurilor aleatorii.\n"
-            "• **Buletin de prudență:** Setează un plafon maxim zilnic.\n"
-            "• **Timp recomandat de pauză:** Minimum 45 de minute după fiecare sesiune."
+            "Statistici & Reguli de Siguranță Financiară\n\n"
+            "- Risc estimat: 80% pierdere pe termen lung în cazul jocurilor aleatorii.\n"
+            "- Buletin de prudență: Setează un plafon maxim zilnic.\n"
+            "- Timp recomandat de pauză: Minimum 45 de minute după fiecare sesiune."
         )
         keyboard = [[InlineKeyboardButton("🔙 Înapoi la Meniu", callback_data="back_start")]]
-        await query.edit_message_text(text=risk_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+        await query.edit_message_text(text=risk_text, reply_markup=InlineKeyboardMarkup(keyboard))
         return
 
     if query.data == "back_start":
@@ -104,39 +92,36 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("ℹ️ Despre Riscuri & Reguli", callback_data="get_risks")]
         ]
         await query.edit_message_text(
-            text="🤖 **Asistent Oficial de Analiză & Managementul Riscului**\n\nAlege o opțiune:",
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode="Markdown"
+            text="Asistent Oficial de Analiză & Managementul Riscului\n\nAlege o opțiune:",
+            reply_markup=InlineKeyboardMarkup(keyboard)
         )
         return
 
     if query.data == "get_stats":
-        await query.edit_message_text(text="🔍 Se procesează datele statistice...")
+        await query.edit_message_text(text="Se procesează datele statistice...")
         
         ai_output = await genereaza_analiza_text()
 
         final_message = (
-            f"📊 **RAPORT STATISTIC DE PRUDENȚĂ**\n\n"
+            "RAPORT STATISTIC DE PRUDENȚĂ\n\n"
             f"{ai_output}\n\n"
-            f"🚨 *Notă: Respectă limitele impuse și joacă responsabil!*"
+            "Notă: Respectă limitele impuse și joacă responsabil!"
         )
         
         keyboard = [[InlineKeyboardButton("🔄 Generează Alte Cifre", callback_data="get_stats")]]
-        await query.edit_message_text(text=final_message, reply_markup=reply_markup, parse_mode="Markdown")
+        await query.edit_message_text(text=final_message, reply_markup=reply_markup)
 
-# Funcție globală pentru prinderea erorilor (Error Handler)
+# Funcție globală pentru prinderea erorilor
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     logger.error("A apărut o excepție în timpul procesării unui update:", exc_info=context.error)
 
 def main():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
-    # Adăugare handlere
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("semnal", semnal_command))
     app.add_handler(CallbackQueryHandler(button_handler))
 
-    # Înregistrare error handler ca să vedem exact ce cauzează problema
     app.add_error_handler(error_handler)
 
     port = int(os.environ.get("PORT", 10000))
